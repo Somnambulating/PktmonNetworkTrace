@@ -1,0 +1,8 @@
+{
+    "vim.handleKeys": {
+        "<C-[>": false,
+        "<C-]>": false,
+        "<C-X>": false
+    },
+    "python.formatting.provider": "autopep8"
+}

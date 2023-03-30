@@ -7,6 +7,7 @@ import time
 import argparse
 import re
 import psutil
+import time
 
 TARGET_PROCESS_NAME = 0
 IPv4_REGEX_PATTERN = r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5}"
@@ -14,13 +15,14 @@ PID_TAG = "PID = "
 LOCAL_TAG = "local="
 REMOTE_TAG = "remote="
 UNKNOWN_CONNECTION_TAG = "unknown"
+DATA_DIR_PATH = "./data/"
 
 class PktmonClient():
     def __init__(self, cmd, target_process, output_file = "pktmon_output") -> None:
         self.cmd_ = cmd
         self.target_process_name = target_process
         self.target_process_pids = []
-        self.output_file_name_ = output_file + "_" + self.target_process_name + ".txt"
+        self.output_file_path_ = DATA_DIR_PATH + output_file + "_" + self.target_process_name + "_" + str(int(time.time()))  + ".txt"
         self.output_file_handler_ = None
         self.ip_dict_ = {}
 
@@ -29,9 +31,14 @@ class PktmonClient():
         for item in self.ip_dict_.items():
             line = ""
             print(item)
-            line = "local=" + item[0][0] + " remote=" + item[0][1] + " pid=" + item[1]
-            line += "\n"
-            lines.append(line)
+            
+            for pid in self.target_process_pids:
+                # print("pid: {0} items[1]: {1}".format(pid, item[1]))
+                if pid == item[1]:
+                    line = "local=" + item[0][0] + " remote=" + item[0][1] + " pid=" + item[1]
+                    line += "\n"
+                    lines.append(line)
+                    break
 
         self.output_file_handler_.writelines(lines)
         self.output_file_handler_.flush()
@@ -46,7 +53,7 @@ class PktmonClient():
         global PID_TAG
 
         try:
-            self.output_file_handler_ = open(self.output_file_name_, "w+")
+            self.output_file_handler_ = open(self.output_file_path_ , "w+")
         except Exception as e:
             print("Error with open")
             exit(-1)
@@ -120,7 +127,6 @@ class PktmonClient():
                     print("Error!")
                     print(info)
                     exit(-1)
-
 
 def parse_argument():
     global TARGET_PROCESS_NAME
