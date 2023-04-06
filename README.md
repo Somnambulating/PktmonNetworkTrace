@@ -4,6 +4,10 @@
 
 # Usage
 
+## Prework
+1. Make sure there is`ktmon.exe` on your windows;
+2. Both two methods program should be ran in administrator privilege;
+
 ## cmd
 
 Example:
