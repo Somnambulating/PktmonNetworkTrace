@@ -37,7 +37,7 @@ class PktmonMonitor():
             print("Cannot Open {0}".format(self.output_file_path_))
             exit(-1)
         
-        self.target_process_pids = self.get_pid_by_name(self.target_process_name)
+        self.update_pid_by_name(self.target_process_name)
 
     def start(self):
         self.is_running = True
@@ -60,6 +60,7 @@ class PktmonMonitor():
         time.sleep(2)
         while self.is_running:
 
+            self.update_pid_by_name(self.target_process_name)
             line = self.proc_.stdout.readline().decode()
             # print(line)
             
@@ -97,13 +98,10 @@ class PktmonMonitor():
         self.output_file_handler_.writelines(lines)
         self.output_file_handler_.flush()
 
-    def get_pid_by_name(self, process_name):
-        pids = []
+    def update_pid_by_name(self, process_name):
         for proc in psutil.process_iter():
-            if process_name in proc.name():
-                pids.append(str(proc.pid))
-        
-        return pids
+            if process_name == proc.name():
+                self.target_process_pids.add(str(proc.pid))
 
     def parser_ip_address(self, line):
         global IPv4_REGEX_PATTERN

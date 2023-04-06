@@ -8,21 +8,23 @@ import argparse
 import re
 import psutil
 import time
+from datetime import datetime
 
 TARGET_PROCESS_NAME = 0
+OUTPUT_FILE_PATH = ""
+VERBOSE = False
 IPv4_REGEX_PATTERN = r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[0-9]{1,5}"
 PID_TAG = "PID = "
 LOCAL_TAG = "local="
 REMOTE_TAG = "remote="
 UNKNOWN_CONNECTION_TAG = "unknown"
-DATA_DIR_PATH = "./data/"
 
 class PktmonClient():
     def __init__(self, cmd, target_process, output_file = "pktmon_output") -> None:
         self.cmd_ = cmd
         self.target_process_name = target_process
-        self.target_process_pids = []
-        self.output_file_path_ = DATA_DIR_PATH + output_file + "_" + self.target_process_name + "_" + str(int(time.time()))  + ".txt"
+        self.target_process_pids = set()
+        self.output_file_path_ = output_file
         self.output_file_handler_ = None
         self.ip_dict_ = {}
 
@@ -30,13 +32,14 @@ class PktmonClient():
         lines = []
         for item in self.ip_dict_.items():
             line = ""
-            print(item)
             
             for pid in self.target_process_pids:
-                # print("pid: {0} items[1]: {1}".format(pid, item[1]))
+                print("pid: {0} items[1]: {1}".format(pid, item[1]))
                 if pid == item[1]:
-                    line = "local=" + item[0][0] + " remote=" + item[0][1] + " pid=" + item[1]
+                    line = datetime.now().strftime("%Y/%m/%d-%H:%M:%S") + " local=" + item[0][0] + " remote=" + item[0][1] + " pid=" + item[1]
                     line += "\n"
+                    if VERBOSE:
+                        print(line)
                     lines.append(line)
                     break
 
@@ -53,23 +56,20 @@ class PktmonClient():
         global PID_TAG
 
         try:
-            self.output_file_handler_ = open(self.output_file_path_ , "w+")
+            self.output_file_handler_ = open(self.output_file_path_ , "w")
         except Exception as e:
             print("Error with open")
             exit(-1)
         
-        self.target_process_pids = self.get_pid_by_name(self.target_process_name)
+        self.update_pid_by_name(self.target_process_name)
 
         signal.signal(signal.SIGINT, self.signal_handler)
 
-    def get_pid_by_name(self, process_name):
-        pids = []
+    def update_pid_by_name(self, process_name):
         for proc in psutil.process_iter():
-            if process_name in proc.name():
-                pids.append(str(proc.pid))
+            if process_name == proc.name():
+                self.target_process_pids.add(str(proc.pid))
         
-        return pids
-
     def parser_ip_address(self, line):
         global IPv4_REGEX_PATTERN
         global LOCAL_TAG
@@ -114,6 +114,7 @@ class PktmonClient():
         time.sleep(2)
         while True:
 
+            self.update_pid_by_name(self.target_process_name)
             line = proc.stdout.readline().decode()
             # print(line)
             
@@ -122,6 +123,7 @@ class PktmonClient():
                 try:
                     print("info:")
                     print(info)
+                    print("pids: ", self.target_process_pids)
                     self.ip_dict_.update({(info[0], info[1]): info[2]})
                 except Exception as e:
                     print("Error!")
@@ -130,18 +132,24 @@ class PktmonClient():
 
 def parse_argument():
     global TARGET_PROCESS_NAME
+    global OUTPUT_FILE_PATH
+    global VERBOSE
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', type=str, required=True, help='Name of target process')
+    parser.add_argument('-p', '--process', type=str, required=True, help='Name of target process')
+    parser.add_argument('-o', '--output', type=str, help='File path of output')
+    parser.add_argument('-v', '--verbose', required=False, action='store_true', help='verbose')
     args = parser.parse_args()
 
-    TARGET_PROCESS_NAME = args.p
+    TARGET_PROCESS_NAME = args.process
+    OUTPUT_FILE_PATH = args.output
+    VERBOSE = args.verbose
 
 def main():
     # TODO: check the exists of pktmon
     parse_argument()
     cmd = "pktmon start --trace -p Microsoft-Windows-TCPIP -p Microsoft-Windows-NDIS -m real-time"
-    pktmonClient = PktmonClient(cmd, TARGET_PROCESS_NAME)
+    pktmonClient = PktmonClient(cmd=cmd, target_process=TARGET_PROCESS_NAME, output_file=OUTPUT_FILE_PATH)
     pktmonClient.init()
     pktmonClient.loop()
 
