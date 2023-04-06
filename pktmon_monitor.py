@@ -20,7 +20,7 @@ class PktmonMonitor():
         global CMD_START
         self.cmd_ = CMD_START
         self.target_process_name = target_process
-        self.target_process_pids = []
+        self.target_process_pids = set()
         self.output_file_path_ = DATA_DIR_PATH + output_file + "_" + self.target_process_name + "_" + str(int(time.time()))  + ".txt"
         self.output_file_handler_ = None
         self.ip_dict_ = {}
